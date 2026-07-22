@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../main.dart';
+import '../models/quote.dart';
+import '../models/quote_status.dart';
 import '../services/firestore_service.dart';
+import 'about_screen.dart';
 import 'customers/customers_screen.dart';
 import 'profile/profile_screen.dart';
 import 'quotes/quote_builder_screen.dart';
@@ -16,7 +19,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  FirestoreService? _firestoreService() {
+  FirestoreService? get _fs {
     final user = authService.currentUser;
     return user == null ? null : FirestoreService(uid: user.uid);
   }
@@ -24,7 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final fs = _firestoreService();
+    final fs = _fs;
 
     return PopScope(
       canPop: _selectedIndex == 0,
@@ -33,26 +36,26 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-        title: const Text('QuoteFlow'),
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: theme.colorScheme.onPrimary,
-        actions: [
-          if (fs != null)
-            IconButton(
-              tooltip: 'פרופיל',
-              icon: const Icon(Icons.person_outline),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => ProfileScreen(firestoreService: fs)),
+          title: const Text('QuoteFlow'),
+          backgroundColor: theme.colorScheme.primary,
+          foregroundColor: theme.colorScheme.onPrimary,
+          actions: [
+            if (fs != null)
+              IconButton(
+                tooltip: 'פרופיל',
+                icon: const Icon(Icons.person_outline),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => ProfileScreen(firestoreService: fs)),
+                ),
               ),
+            IconButton(
+              tooltip: 'התנתקות',
+              icon: const Icon(Icons.logout),
+              onPressed: () => authService.signOut(),
             ),
-          IconButton(
-            tooltip: 'התנתקות',
-            icon: const Icon(Icons.logout),
-            onPressed: () => authService.signOut(),
-          ),
-        ],
-      ),
+          ],
+        ),
       body: ColoredBox(
         color: theme.colorScheme.surface,
         child: Column(
@@ -61,7 +64,10 @@ class _HomeScreenState extends State<HomeScreen> {
               child: IndexedStack(
                 index: _selectedIndex,
                 children: [
-                  _DashboardView(onNavigate: (index) => setState(() => _selectedIndex = index)),
+                  _DashboardView(
+                    firestoreService: fs,
+                    onNavigate: (index) => setState(() => _selectedIndex = index),
+                  ),
                   if (fs != null) QuoteBuilderScreen(firestoreService: fs)
                   else const Center(child: Text('הצעה חדשה')),
                   if (fs != null)
@@ -176,61 +182,131 @@ class _NavItem extends StatelessWidget {
 // ── Dashboard ──
 
 class _DashboardView extends StatelessWidget {
-  const _DashboardView({this.onNavigate});
+  const _DashboardView({this.firestoreService, this.onNavigate});
 
+  final FirestoreService? firestoreService;
   final ValueChanged<int>? onNavigate;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text('שלום,', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 4),
-        Text(
-          'ניהול הצעות מחיר בזמן אמת',
-          style: TextStyle(color: cs.onSurfaceVariant),
-        ),
-        const SizedBox(height: 24),
-        Text(
-          'פעולות מהירות',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        Row(
+
+    if (firestoreService == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return StreamBuilder<List<Quote>>(
+      stream: firestoreService!.watchQuotes(),
+      builder: (context, snapshot) {
+        final quotes = snapshot.data ?? [];
+
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text('שלום,', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 4),
+            Text(
+              'ניהול הצעות מחיר בזמן אמת',
+              style: TextStyle(color: cs.onSurfaceVariant),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'פעולות מהירות',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _QuickActionTile(
+                    icon: Icons.add_circle,
+                    label: 'הצעת מחיר חדשה',
+                    color: cs.primary,
+                    onTap: onNavigate != null ? () => onNavigate!(1) : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _QuickActionTile(
+                    icon: Icons.people,
+                    label: 'ניהול לקוחות',
+                    color: cs.tertiary,
+                    onTap: onNavigate != null ? () => onNavigate!(2) : null,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'הצעות מחיר אחרונות',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            if (quotes.isEmpty)
+              Text('אין עדיין הצעות מחיר שמורות', style: TextStyle(color: cs.outline))
+            else
+              ...quotes.take(20).map((quote) => _QuoteCard(quote: quote)),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _QuoteCard extends StatelessWidget {
+  const _QuoteCard({required this.quote});
+
+  final Quote quote;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final statusColor = _statusColor(cs);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
           children: [
             Expanded(
-              child: _QuickActionTile(
-                icon: Icons.add_circle,
-                label: 'הצעת מחיר חדשה',
-                color: cs.primary,
-                onTap: onNavigate != null ? () => onNavigate!(1) : null,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(quote.title.isNotEmpty ? quote.title : 'הצעה #${quote.quoteNumber}',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 2),
+                  Text(quote.customerName, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+                ],
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _QuickActionTile(
-                icon: Icons.people,
-                label: 'ניהול לקוחות',
-                color: cs.tertiary,
-                onTap: onNavigate != null ? () => onNavigate!(2) : null,
-              ),
+            Chip(
+              label: Text(quote.status.displayName, style: TextStyle(fontSize: 11, color: statusColor)),
+              backgroundColor: statusColor.withAlpha(30),
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
             ),
+            const SizedBox(width: 8),
+            Text('₪${quote.finalTotal.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
-        const SizedBox(height: 24),
-        Text(
-          'הצעות מחיר אחרונות',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'אין עדיין הצעות מחיר שמורות',
-          style: TextStyle(color: cs.outline),
-        ),
-      ],
+      ),
     );
+  }
+
+  Color _statusColor(ColorScheme cs) {
+    switch (quote.status) {
+      case QuoteStatus.draft:
+        return cs.outline;
+      case QuoteStatus.sent:
+        return cs.primary;
+      case QuoteStatus.approved:
+        return Colors.orange;
+      case QuoteStatus.inProduction:
+        return Colors.purple;
+      case QuoteStatus.paid:
+        return Colors.green;
+    }
   }
 }
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../main.dart';
 import '../../models/profile.dart';
 import '../../services/firestore_service.dart';
+import '../about_screen.dart';
 import 'logo_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -257,6 +258,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 32),
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('אודות האפליקציה'),
+              trailing: const Icon(Icons.chevron_left),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen())),
             ),
             const SizedBox(height: 32),
           ],
