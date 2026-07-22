@@ -16,35 +16,42 @@ class CustomerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      surfaceTintColor: Colors.transparent,
+      margin: const EdgeInsets.only(bottom: 12),
       child: ExpansionTile(
+        iconColor: cs.secondary,
+        collapsedIconColor: cs.onSurface,
         leading: CircleAvatar(
-          child: Text(customer.name.trim().isEmpty ? '?' : customer.name.trim()[0]),
+          backgroundColor: cs.secondary,
+          child: Text(
+            customer.name.trim().isEmpty ? '?' : customer.name.trim()[0],
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
-        title: Text(
-          customer.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(_subtitle),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        title: Text(customer.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        subtitle: Text(_subtitle, style: TextStyle(color: cs.onSurface.withAlpha(153), fontSize: 13)),
+        childrenPadding: const EdgeInsets.all(16),
         children: [
-          if (customer.address.isNotEmpty) _DetailRow(Icons.location_on_outlined, customer.address),
-          if (customer.phone.isNotEmpty) _DetailRow(Icons.phone_outlined, customer.phone),
-          if (customer.hp.isNotEmpty) _DetailRow(Icons.badge_outlined, 'ח.פ / ת.ז: ${customer.hp}'),
-          const Divider(),
+          if (customer.address.isNotEmpty)
+            Text(customer.address, style: TextStyle(fontSize: 14, color: cs.onSurface)),
+          if (customer.phone.isNotEmpty || customer.address.isNotEmpty) const SizedBox(height: 12),
+          const Divider(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               TextButton.icon(
                 onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('עריכה'),
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                label: const Text('ערוך לקוח', style: TextStyle(fontSize: 12)),
+                style: TextButton.styleFrom(foregroundColor: Colors.blueGrey),
               ),
               TextButton.icon(
                 onPressed: onDelete,
-                icon: const Icon(Icons.delete_outline),
-                label: const Text('מחיקה'),
+                icon: const Icon(Icons.delete, size: 16),
+                label: const Text('מחק לקוח', style: TextStyle(fontSize: 12)),
+                style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
               ),
             ],
           ),
@@ -58,27 +65,5 @@ class CustomerCard extends StatelessWidget {
     if (customer.hp.isNotEmpty) parts.add('ח.פ: ${customer.hp}');
     if (customer.phone.isNotEmpty) parts.add(customer.phone);
     return parts.isEmpty ? 'אין פרטים נוספים' : parts.join(' | ');
-  }
-}
-
-class _DetailRow extends StatelessWidget {
-  const _DetailRow(this.icon, this.text);
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: cs.onSurfaceVariant),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text)),
-        ],
-      ),
-    );
   }
 }

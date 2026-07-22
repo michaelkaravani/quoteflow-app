@@ -21,6 +21,7 @@ class _AddItemDialogState extends State<_AddItemDialog> {
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
   final _quantityController = TextEditingController(text: '1');
+  bool _saveToFavorites = false;
 
   @override
   void dispose() {
@@ -45,8 +46,12 @@ class _AddItemDialogState extends State<_AddItemDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return AlertDialog(
-      title: const Text('הוספת פריט להצעה'),
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text('הוספת פריט להצעה',
+          style: TextStyle(fontWeight: FontWeight.bold, color: cs.primary)),
       content: Form(
         key: _formKey,
         child: Column(
@@ -55,41 +60,64 @@ class _AddItemDialogState extends State<_AddItemDialog> {
             TextFormField(
               controller: _nameController,
               autofocus: true,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'שם הפריט / השירות',
-                border: OutlineInputBorder(),
+                labelStyle: TextStyle(fontWeight: FontWeight.bold, color: cs.onSurface.withAlpha(153)),
+                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: cs.primary.withAlpha(51))),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: cs.secondary)),
               ),
               validator: (v) => v == null || v.trim().isEmpty ? 'נא להזין שם פריט' : null,
             ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _priceController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'מחיר ליחידה',
-                prefixText: '₪ ',
-                border: OutlineInputBorder(),
-              ),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'נא להזין מחיר';
-                final n = double.tryParse(v.trim());
-                if (n == null || n < 0) return 'מחיר לא תקין';
-                return null;
-              },
+            const SizedBox(height: 15),
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: TextFormField(
+                    controller: _priceController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: 'מחיר ליחידה',
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'נא להזין מחיר';
+                      final n = double.tryParse(v.trim());
+                      if (n == null || n < 0) return 'מחיר לא תקין';
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 1,
+                  child: TextFormField(
+                    controller: _quantityController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'כמות',
+                    ),
+                    validator: (v) {
+                      final n = int.tryParse(v?.trim() ?? '');
+                      if (n == null || n < 1) return 'הכמות חייבת להיות לפחות 1';
+                      return null;
+                    },
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _quantityController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'כמות',
-                border: OutlineInputBorder(),
-              ),
-              validator: (v) {
-                final n = int.tryParse(v?.trim() ?? '');
-                if (n == null || n < 1) return 'הכמות חייבת להיות לפחות 1';
-                return null;
-              },
+            const SizedBox(height: 15),
+            Row(
+              children: [
+                Checkbox(
+                  value: _saveToFavorites,
+                  onChanged: (v) => setState(() => _saveToFavorites = v ?? false),
+                  activeColor: cs.secondary,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                const SizedBox(width: 4),
+                Text('שמור מוצר זה למועדפים קבועים',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: cs.onSurface)),
+              ],
             ),
           ],
         ),
@@ -97,9 +125,16 @@ class _AddItemDialogState extends State<_AddItemDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('ביטול'),
+          child: Text('ביטול', style: TextStyle(color: cs.onSurface.withAlpha(153))),
         ),
-        FilledButton(onPressed: _submit, child: const Text('שמירה')),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: cs.secondary,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: _submit,
+          child: const Text('שמירה'),
+        ),
       ],
     );
   }

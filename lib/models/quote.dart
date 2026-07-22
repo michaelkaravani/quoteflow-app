@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp;
+
 import 'customer.dart';
 import 'quote_item.dart';
 import 'quote_status.dart';
@@ -88,10 +90,15 @@ class Quote {
       total: (map['total'] as num?)?.toDouble() ?? 0,
       notes: map['notes'] as String? ?? '',
       status: _parseStatus(map['status'] as String?),
-      date: DateTime.tryParse(map['date'] as String? ?? '') ?? DateTime.now(),
-      createdAt:
-          DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
+      date: _parseDateTime(map['date']),
+      createdAt: _parseDateTime(map['createdAt']),
     );
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+    return DateTime.now();
   }
 
   static QuoteStatus _parseStatus(String? value) {

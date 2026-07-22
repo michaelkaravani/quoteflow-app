@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../main.dart';
-import '../models/quote.dart';
-import '../models/quote_status.dart';
 import '../services/firestore_service.dart';
-import 'about_screen.dart';
 import 'customers/customers_screen.dart';
+import 'home/bottom_nav_bar.dart';
+import 'home/dashboard_view.dart';
 import 'profile/profile_screen.dart';
 import 'quotes/quote_builder_screen.dart';
 
@@ -56,290 +55,70 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-      body: ColoredBox(
-        color: theme.colorScheme.surface,
-        child: Column(
-          children: [
-            Expanded(
-              child: IndexedStack(
-                index: _selectedIndex,
-                children: [
-                  _DashboardView(
-                    firestoreService: fs,
-                    onNavigate: (index) => setState(() => _selectedIndex = index),
-                  ),
-                  if (fs != null) QuoteBuilderScreen(firestoreService: fs)
-                  else const Center(child: Text('הצעה חדשה')),
-                  if (fs != null)
-                    CustomersScreen(firestoreService: fs)
-                  else
-                    const Center(child: Text('לא נמצא משתמש מחובר')),
-                ],
-              ),
-            ),
-            _BottomNavBar(
-              selectedIndex: _selectedIndex,
-              onTap: (i) => setState(() => _selectedIndex = i),
-            ),
-          ],
-        ),
-      ),
-      ),
-    );
-  }
-}
-
-// ── Bottom navigation ──
-
-class _BottomNavBar extends StatelessWidget {
-  const _BottomNavBar({required this.selectedIndex, required this.onTap});
-
-  final int selectedIndex;
-  final ValueChanged<int> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            children: [
-              _NavItem(
-                icon: selectedIndex == 0 ? Icons.dashboard_rounded : Icons.dashboard_outlined,
-                label: 'ראשי',
-                selected: selectedIndex == 0,
-                onTap: () => onTap(0),
-              ),
-              _NavItem(
-                icon: selectedIndex == 1 ? Icons.description : Icons.description_outlined,
-                label: 'הצעה חדשה',
-                selected: selectedIndex == 1,
-                onTap: () => onTap(1),
-              ),
-              _NavItem(
-                icon: selectedIndex == 2 ? Icons.people : Icons.people_outlined,
-                label: 'לקוחות',
-                selected: selectedIndex == 2,
-                onTap: () => onTap(2),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = selected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant;
-
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Dashboard ──
-
-class _DashboardView extends StatelessWidget {
-  const _DashboardView({this.firestoreService, this.onNavigate});
-
-  final FirestoreService? firestoreService;
-  final ValueChanged<int>? onNavigate;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    if (firestoreService == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return StreamBuilder<List<Quote>>(
-      stream: firestoreService!.watchQuotes(),
-      builder: (context, snapshot) {
-        final quotes = snapshot.data ?? [];
-
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Text('שלום,', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 4),
-            Text(
-              'ניהול הצעות מחיר בזמן אמת',
-              style: TextStyle(color: cs.onSurfaceVariant),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'פעולות מהירות',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _QuickActionTile(
-                    icon: Icons.add_circle,
-                    label: 'הצעת מחיר חדשה',
-                    color: cs.primary,
-                    onTap: onNavigate != null ? () => onNavigate!(1) : null,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _QuickActionTile(
-                    icon: Icons.people,
-                    label: 'ניהול לקוחות',
-                    color: cs.tertiary,
-                    onTap: onNavigate != null ? () => onNavigate!(2) : null,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'הצעות מחיר אחרונות',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            if (quotes.isEmpty)
-              Text('אין עדיין הצעות מחיר שמורות', style: TextStyle(color: cs.outline))
-            else
-              ...quotes.take(20).map((quote) => _QuoteCard(quote: quote)),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _QuoteCard extends StatelessWidget {
-  const _QuoteCard({required this.quote});
-
-  final Quote quote;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final statusColor = _statusColor(cs);
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(quote.title.isNotEmpty ? quote.title : 'הצעה #${quote.quoteNumber}',
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 2),
-                  Text(quote.customerName, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
-                ],
-              ),
-            ),
-            Chip(
-              label: Text(quote.status.displayName, style: TextStyle(fontSize: 11, color: statusColor)),
-              backgroundColor: statusColor.withAlpha(30),
-              padding: EdgeInsets.zero,
-              visualDensity: VisualDensity.compact,
-            ),
-            const SizedBox(width: 8),
-            Text('₪${quote.finalTotal.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Color _statusColor(ColorScheme cs) {
-    switch (quote.status) {
-      case QuoteStatus.draft:
-        return cs.outline;
-      case QuoteStatus.sent:
-        return cs.primary;
-      case QuoteStatus.approved:
-        return Colors.orange;
-      case QuoteStatus.inProduction:
-        return Colors.purple;
-      case QuoteStatus.paid:
-        return Colors.green;
-    }
-  }
-}
-
-class _QuickActionTile extends StatelessWidget {
-  const _QuickActionTile({
-    required this.icon,
-    required this.label,
-    required this.color,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final onColor = Theme.of(context).colorScheme.onPrimary;
-    return Card(
-      color: color,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24),
+        body: ColoredBox(
+          color: theme.colorScheme.surface,
           child: Column(
             children: [
-              Icon(icon, color: onColor, size: 36),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: TextStyle(color: onColor, fontWeight: FontWeight.bold),
+              Expanded(
+                child: IndexedStack(
+                  index: _selectedIndex,
+                  children: [
+                    DashboardView(
+                      firestoreService: fs,
+                      onNavigate: (index) => setState(() => _selectedIndex = index),
+                      onUpdateQuoteStatus: (quote) async {
+                        if (fs == null) return;
+                        await fs.updateQuote(quote);
+                      },
+                      onEditQuote: (quote) {
+                        if (fs == null) return;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => Scaffold(
+                              appBar: AppBar(
+                                title: const Text('עריכת הצעת מחיר'),
+                                backgroundColor: Theme.of(context).colorScheme.primary,
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                              body: QuoteBuilderScreen(
+                                firestoreService: fs,
+                                existingQuote: quote,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      onDeleteQuote: (quote) async {
+                        if (fs == null) return;
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            surfaceTintColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            title: const Text('מחיקת הצעת מחיר'),
+                            content: Text('האם למחוק את ${quote.title.isNotEmpty ? quote.title : 'הצעה #${quote.quoteNumber}'}?'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ביטול')),
+                              FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('מחיקה')),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true) {
+                          await fs.deleteQuote(quote.id);
+                        }
+                      },
+                    ),
+                    if (fs != null) QuoteBuilderScreen(firestoreService: fs)
+                    else const Center(child: Text('הצעה חדשה')),
+                    if (fs != null) CustomersScreen(firestoreService: fs)
+                    else const Center(child: Text('לא נמצא משתמש מחובר')),
+                  ],
+                ),
+              ),
+              BottomNavBar(
+                selectedIndex: _selectedIndex,
+                onTap: (i) => setState(() => _selectedIndex = i),
               ),
             ],
           ),

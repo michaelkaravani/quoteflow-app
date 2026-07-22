@@ -82,10 +82,11 @@ class FirestoreService {
   // ── Quotes ──
 
   Stream<List<Quote>> watchQuotes() {
-    return _quotes.orderBy('createdAt', descending: true).snapshots().map(
+    return _quotes.snapshots().map(
           (snapshot) => snapshot.docs
               .map((doc) => Quote.fromMap(doc.id, doc.data()))
-              .toList(),
+              .toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
         );
   }
 

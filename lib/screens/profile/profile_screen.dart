@@ -1,10 +1,12 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 import '../../main.dart';
 import '../../models/profile.dart';
 import '../../services/firestore_service.dart';
 import '../about_screen.dart';
-import 'logo_picker.dart';
 import 'theme_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -70,9 +72,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isSaving = true);
-
     try {
       await widget.firestoreService.saveProfile(Profile(
         businessName: _businessController.text.trim(),
@@ -84,7 +84,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         defaultPdfNotes: _notesController.text.trim(),
         paymentTerms: _termsController.text.trim(),
       ));
-
       if (mounted) _showMessage('הפרטים עודכנו ונשמרו בהצלחה!');
     } catch (_) {
       if (mounted) _showMessage('שגיאה בשמירה. נא לנסות שוב.');
@@ -94,8 +93,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _pickLogo() async {
-    final path = await pickAndSaveLogo();
-    if (path != null) setState(() => _logoPath = path);
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom, allowedExtensions: ['svg', 'png', 'jpg', 'jpeg'],
+    );
+    if (result == null || result.files.single.path == null) return;
+    final file = File(result.files.single.path!);
+    if (file.lengthSync() > 5 * 1024 * 1024) return;
+    final dir = await getApplicationDocumentsDirectory();
+    final saved = await file.copy('${dir.path}/business_logo${result.files.single.extension ?? '.png'}');
+    if (mounted) setState(() => _logoPath = saved.path);
   }
 
   void _showMessage(String message) {
@@ -119,167 +125,195 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(24),
           children: [
             Center(
               child: CircleAvatar(
-                radius: 48,
-                backgroundColor: cs.primaryContainer,
-                child: Text(
-                  _businessController.text.isNotEmpty
-                      ? _businessController.text[0]
-                      : '?',
-                  style: TextStyle(fontSize: 36, color: cs.onPrimaryContainer),
-                ),
+                radius: 45,
+                backgroundColor: cs.primary,
+                child: Icon(Icons.business_rounded, size: 40, color: cs.onPrimary),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 12),
             Center(
               child: Text(
-                _businessController.text.isNotEmpty
-                    ? _businessController.text
-                    : 'שם העסק שלך',
-                style: Theme.of(context).textTheme.titleMedium,
+                _businessController.text.isNotEmpty ? _businessController.text : 'שם העסק שלך',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: cs.onSurface),
               ),
             ),
-            const SizedBox(height: 24),
-            TextFormField(
-              controller: _businessController,
-              decoration: const InputDecoration(
-                labelText: 'שם העסק / פרופיל',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.business),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _emailController,
-              readOnly: true,
-              decoration: const InputDecoration(
-                labelText: 'כתובת אימייל',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.email_outlined),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'מספר טלפון',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.phone_outlined),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _vatController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'אחוז מע"מ',
-                      suffixText: '%',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: CheckboxListTile(
-                    title: const Text('פטור ממע"מ', style: TextStyle(fontSize: 13)),
-                    value: _vatExempt,
-                    onChanged: (v) => setState(() => _vatExempt = v ?? false),
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ],
-            ),
-            if (_vatExempt)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  'אינו גובה מע"מ ואינו מנכה מע"מ',
-                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
-                ),
-              ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: _pickLogo,
-              icon: const Icon(Icons.image_outlined),
-              label: Text(_logoPath.isNotEmpty ? 'החלף לוגו' : 'הוסף לוגו עסק'),
-            ),
-            if (_logoPath.isNotEmpty)
-              Text(
-                'לוגו נבחר',
-                style: TextStyle(color: cs.outline, fontSize: 12),
-                textAlign: TextAlign.center,
-              ),
-            const SizedBox(height: 24),
-            const Text('הגדרות PDF', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _notesController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'הערות ברירת מחדל לתחתית ה-PDF',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _termsController,
-              maxLines: 2,
-              decoration: const InputDecoration(
-                labelText: 'תנאי תשלום ל-PDF',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _isSaving ? null : _save,
-                    child: _isSaving
-                        ? const SizedBox(
-                            width: 18, height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('שמירת שינויים'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('ביטול'),
-                  ),
-                ),
-              ],
+            Center(
+              child: Text('מנהל מערכת',
+                  style: TextStyle(fontSize: 13, color: cs.onSurface.withAlpha(153))),
             ),
             const SizedBox(height: 32),
-            ListTile(
-              leading: const Icon(Icons.color_lens_outlined),
-              title: const Text('ערכת נושא'),
-              trailing: const Icon(Icons.chevron_left),
-              onTap: () => showModalBottomSheet(
-                context: context,
-                builder: (_) => ThemePicker(notifier: themeNotifier),
+            Card(
+              surfaceTintColor: Colors.transparent,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    _buildField(_businessController, 'שם העסק / פרופיל', Icons.business),
+                    const SizedBox(height: 16),
+                    _buildField(_phoneController, 'מספר טלפון', Icons.phone_outlined),
+                    const SizedBox(height: 16),
+                    _buildField(_emailController, 'כתובת אימייל', Icons.email_outlined, readOnly: true),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _vatController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: 'אחוז מע"מ',
+                              suffixText: '%',
+                              filled: true, fillColor: cs.surfaceContainerLow,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              prefixIcon: const Icon(Icons.percent, size: 20),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: CheckboxListTile(
+                            title: const Text('פטור ממע"מ', style: TextStyle(fontSize: 13)),
+                            value: _vatExempt,
+                            onChanged: (v) => setState(() => _vatExempt = v ?? false),
+                            controlAffinity: ListTileControlAffinity.leading,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_vatExempt)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text('אינו גובה מע"מ ואינו מנכה מע"מ',
+                            style: TextStyle(fontSize: 11, color: cs.onSurface.withAlpha(128))),
+                      ),
+                    const SizedBox(height: 20),
+                    OutlinedButton.icon(
+                      onPressed: _pickLogo,
+                      icon: const Icon(Icons.image, size: 18),
+                      label: Text(_logoPath.isNotEmpty ? 'החלף לוגו' : 'בחר לוגו'),
+                    ),
+                    if (_logoPath.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text('לוגו נבחר', style: TextStyle(color: cs.outline, fontSize: 12)),
+                      ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 4),
-            ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('אודות האפליקציה'),
-              trailing: const Icon(Icons.chevron_left),
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen())),
+            const SizedBox(height: 24),
+            Card(
+              surfaceTintColor: Colors.transparent,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: _notesController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: 'הערות ברירת מחדל לתחתית ה-PDF',
+                        filled: true, fillColor: cs.surfaceContainerLow,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _termsController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: 'תנאי תשלום ל-PDF',
+                        filled: true, fillColor: cs.surfaceContainerLow,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: cs.secondary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: _isSaving ? null : _save,
+                child: _isSaving
+                    ? const SizedBox(width: 18, height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('שמירת שינויים'),
+              ),
+            ),
+            const SizedBox(height: 32),
+            Card(
+              surfaceTintColor: Colors.transparent,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Icon(Icons.palette_outlined, color: cs.primary),
+                    title: const Text('ערכת נושא', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text(themeNotifier.theme.displayName,
+                        style: TextStyle(fontSize: 13, color: cs.onSurface.withAlpha(153))),
+                    trailing: Icon(Icons.arrow_back_ios_new, size: 16, color: cs.onSurface.withAlpha(153)),
+                    onTap: () => showModalBottomSheet(
+                      context: context,
+                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+                      builder: (_) => ThemePicker(notifier: themeNotifier),
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: Icon(Icons.info_outline, color: cs.primary),
+                    title: const Text('אודות האפליקציה', style: TextStyle(fontWeight: FontWeight.w600)),
+                    trailing: Icon(Icons.arrow_back_ios_new, size: 16, color: cs.onSurface.withAlpha(153)),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen())),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: () => authService.sendPasswordReset(authService.currentUser?.email ?? ''),
+              icon: const Icon(Icons.lock_reset, size: 20),
+              label: const Text('שליחת קישור לאיפוס סיסמה',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              style: TextButton.styleFrom(foregroundColor: cs.primary),
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: () => authService.signOut(),
+              icon: const Icon(Icons.logout, size: 20),
+              label: const Text('התנתקות מהמערכת',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
             ),
             const SizedBox(height: 32),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildField(TextEditingController controller, String label, IconData icon, {bool readOnly = false}) {
+    final cs = Theme.of(context).colorScheme;
+    return TextFormField(
+      controller: controller,
+      readOnly: readOnly,
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: cs.surfaceContainerLow,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        prefixIcon: Icon(icon, size: 20),
       ),
     );
   }

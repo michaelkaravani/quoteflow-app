@@ -85,6 +85,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return StreamBuilder<List<Customer>>(
       stream: widget.firestoreService.watchCustomers(),
       builder: (context, snapshot) {
@@ -101,29 +103,40 @@ class _CustomersScreenState extends State<CustomersScreen> {
             Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: SearchBar(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: TextField(
                     controller: _searchController,
-                    hintText: 'חיפוש לקוח...',
-                    leading: const Icon(Icons.search),
-                    trailing: [
-                      if (_query.isNotEmpty)
-                        IconButton(
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _query = '');
-                          },
-                          icon: const Icon(Icons.clear),
-                        ),
-                    ],
                     onChanged: (value) => setState(() => _query = value),
+                    style: const TextStyle(fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'חיפוש לקוח...',
+                      hintStyle: TextStyle(color: cs.onSurface.withAlpha(102)),
+                      prefixIcon: Icon(Icons.search, color: cs.onSurface.withAlpha(153)),
+                      suffixIcon: _query.isNotEmpty
+                          ? IconButton(
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _query = '');
+                              },
+                              icon: Icon(Icons.clear, color: cs.onSurface.withAlpha(153)),
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: cs.surfaceContainerLow,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: cs.secondary, width: 1.5),
+                      ),
+                    ),
                   ),
                 ),
                 Expanded(
                   child: customers.isEmpty
                       ? _EmptyCustomers(hasQuery: _query.isNotEmpty)
                       : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          padding: const EdgeInsets.all(16),
                           itemCount: customers.length,
                           itemBuilder: (context, index) {
                             final customer = customers[index];
@@ -140,10 +153,11 @@ class _CustomersScreenState extends State<CustomersScreen> {
             Positioned(
               left: 16,
               bottom: 16,
-              child: FloatingActionButton.extended(
+              child: FloatingActionButton(
+                backgroundColor: cs.secondary,
+                elevation: 2,
                 onPressed: _openForm,
-                icon: const Icon(Icons.person_add_alt_1),
-                label: const Text('לקוח חדש'),
+                child: const Icon(Icons.add, color: Colors.white),
               ),
             ),
           ],

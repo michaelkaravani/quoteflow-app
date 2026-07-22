@@ -9,10 +9,7 @@ import '../../models/quote_item.dart';
 class PremiumDarkTemplate {
   static Future<Uint8List> build(Quote quote, Profile profile) async {
     final pdf = pw.Document();
-    final fontData = await _loadFont();
-    final font = fontData != null
-        ? pw.Font.ttf(fontData.buffer as ByteStream)
-        : pw.Font.helvetica();
+    final font = pw.Font.helvetica();
 
     pdf.addPage(
       pw.MultiPage(
@@ -31,12 +28,7 @@ class PremiumDarkTemplate {
     return pdf.save();
   }
 
-  static Future<Uint8List> _loadFont() async {
-    // Returns null to use Helvetica; Hebrew may need a dedicated font
-    return Uint8List(0);
-  }
-
-  static pw.Widget _header(pw.Context ctx, Quote quote, Profile profile, pw.Font font) {
+static pw.Widget _header(pw.Context ctx, Quote quote, Profile profile, pw.Font font) {
     return pw.Container(
       padding: const pw.EdgeInsets.only(bottom: 20),
       decoration: const pw.BoxDecoration(
