@@ -22,6 +22,7 @@ dependencies:
   open_file: ^3.5.11
   url_launcher: ^6.3.1
   pdf: ^3.12.0
+  printing: ^5.14.2
   syncfusion_flutter_pdf: ^33.2.13
   # syncfusion_flutter_pdfviewer removed - v26 incompatible with AGP 9+/jcenter removal
   # Will add back with a newer version when needed
