@@ -34,6 +34,11 @@ class QuoteFlowApp extends StatelessWidget {
         useMaterial3: true,
         colorSchemeSeed: Colors.blue,
         brightness: Brightness.light,
+        appBarTheme: const AppBarTheme(
+          centerTitle: true,
+          elevation: 2,
+          scrolledUnderElevation: 4,
+        ),
       ),
       home: StreamBuilder(
         stream: authService.authStateChanges,
