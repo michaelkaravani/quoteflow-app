@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 import '../services/firestore_service.dart';
 import 'customers/customers_screen.dart';
+import 'profile/profile_screen.dart';
 import 'quotes/quote_builder_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -36,6 +37,15 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
         actions: [
+          if (fs != null)
+            IconButton(
+              tooltip: 'פרופיל',
+              icon: const Icon(Icons.person_outline),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => ProfileScreen(firestoreService: fs)),
+              ),
+            ),
           IconButton(
             tooltip: 'התנתקות',
             icon: const Icon(Icons.logout),
