@@ -9,17 +9,19 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   cupertino_icons: ^1.0.8
   firebase_core: ^3.12.1
   firebase_auth: ^5.5.1
   cloud_firestore: ^5.6.5
   cloud_functions: ^5.3.4
   file_picker: ^10.3.3
-  intl: ^0.19.0
+  intl: ^0.20.2
   path_provider: ^2.1.5
   open_file: ^3.5.11
   pdf: ^3.12.0
-  syncfusion_flutter_pdf: ^26.2.14
+  syncfusion_flutter_pdf: ^33.2.13
   # syncfusion_flutter_pdfviewer removed - v26 incompatible with AGP 9+/jcenter removal
   # Will add back with a newer version when needed
 

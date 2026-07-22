@@ -171,13 +171,14 @@ class _EmptyCustomers extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.people_outline, size: 64, color: Colors.grey),
+            Icon(Icons.people_outline, size: 64, color: cs.outline),
             const SizedBox(height: 16),
             Text(
               hasQuery

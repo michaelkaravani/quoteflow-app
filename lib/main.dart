@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'firebase_options.dart';
 import 'screens/home_screen.dart';
@@ -27,8 +28,9 @@ class QuoteFlowApp extends StatelessWidget {
       locale: const Locale('he', 'IL'),
       supportedLocales: const [Locale('he', 'IL')],
       localizationsDelegates: const [
-        DefaultMaterialLocalizations.delegate,
-        DefaultWidgetsLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
       ],
       theme: ThemeData(
         useMaterial3: true,
