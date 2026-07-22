@@ -17,23 +17,26 @@ Future<void> main() async {
 }
 
 class QuoteFlowApp extends StatelessWidget {
-  const QuoteFlowApp({super.key, AuthService? authService})
-      : _authService = authService;
-
-  final AuthService? _authService;
+  const QuoteFlowApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final service = _authService ?? authService;
     return MaterialApp(
       title: 'QuoteFlow',
       debugShowCheckedModeBanner: false,
+      locale: const Locale('he', 'IL'),
+      supportedLocales: const [Locale('he', 'IL')],
+      localizationsDelegates: const [
+        DefaultMaterialLocalizations.delegate,
+        DefaultWidgetsLocalizations.delegate,
+      ],
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.blue,
+        brightness: Brightness.light,
       ),
       home: StreamBuilder(
-        stream: service.authStateChanges,
+        stream: authService.authStateChanges,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
@@ -41,9 +44,9 @@ class QuoteFlowApp extends StatelessWidget {
             );
           }
           if (snapshot.hasData) {
-            return HomeScreen(authService: service);
+            return const HomeScreen();
           }
-          return LoginScreen(authService: service);
+          return const LoginScreen();
         },
       ),
     );
