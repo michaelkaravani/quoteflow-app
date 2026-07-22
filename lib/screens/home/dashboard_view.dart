@@ -5,6 +5,8 @@ import '../../models/profile.dart';
 import '../../models/quote.dart';
 import '../../models/quote_status.dart';
 import '../../services/firestore_service.dart';
+import '../../utils/csv_export_service.dart';
+import '../../utils/month_picker_dialog.dart';
 import 'kpi_card.dart';
 import 'quote_card.dart';
 import 'quick_action_tile.dart';
@@ -143,8 +145,20 @@ class _DashboardViewState extends State<DashboardView> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                Text('הצעות מחיר אחרונות',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text('הצעות מחיר אחרונות',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    ),
+                    if (allQuotes.isNotEmpty)
+                      IconButton(
+                        tooltip: 'ייצוא דוח חודשי',
+                        icon: Icon(Icons.file_download, color: cs.primary, size: 24),
+                        onPressed: () => _exportCsv(context, allQuotes, profileSnapshot.data),
+                      ),
+                  ],
+                ),
                 const SizedBox(height: 8),
                 if (allQuotes.isNotEmpty)
                   Padding(
@@ -259,6 +273,29 @@ class _DashboardViewState extends State<DashboardView> {
         );
       },
     );
+  }
+
+  Future<void> _exportCsv(BuildContext context, List<Quote> allQuotes, Profile? profile) async {
+    if (profile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('יש להשלים פרופיל תחילה')),
+      );
+      return;
+    }
+    final result = await showDialog<DateTime>(
+      context: context,
+      builder: (_) => const MonthPickerDialog(),
+    );
+    if (result == null || !context.mounted) return;
+    try {
+      await CsvExportService.shareCsv(allQuotes, profile, result.year, result.month);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('שגיאה בייצוא הדוח')),
+        );
+      }
+    }
   }
 
   Future<void> _shareQuote(BuildContext context, Quote quote) async {
