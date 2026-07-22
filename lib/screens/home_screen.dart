@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 import '../services/firestore_service.dart';
 import 'customers/customers_screen.dart';
+import 'quotes/quote_builder_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,8 +25,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final theme = Theme.of(context);
     final fs = _firestoreService();
 
-    return Scaffold(
-      appBar: AppBar(
+    return PopScope(
+      canPop: _selectedIndex == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(() => _selectedIndex = 0);
+      },
+      child: Scaffold(
+        appBar: AppBar(
         title: const Text('QuoteFlow'),
         backgroundColor: theme.colorScheme.primary,
         foregroundColor: theme.colorScheme.onPrimary,
@@ -45,8 +51,9 @@ class _HomeScreenState extends State<HomeScreen> {
               child: IndexedStack(
                 index: _selectedIndex,
                 children: [
-                  const _DashboardView(),
-                  const Center(child: Text('הצעה חדשה')),
+                  _DashboardView(onNavigate: (index) => setState(() => _selectedIndex = index)),
+                  if (fs != null) QuoteBuilderScreen(firestoreService: fs)
+                  else const Center(child: Text('הצעה חדשה')),
                   if (fs != null)
                     CustomersScreen(firestoreService: fs)
                   else
@@ -60,6 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -158,7 +166,9 @@ class _NavItem extends StatelessWidget {
 // ── Dashboard ──
 
 class _DashboardView extends StatelessWidget {
-  const _DashboardView();
+  const _DashboardView({this.onNavigate});
+
+  final ValueChanged<int>? onNavigate;
 
   @override
   Widget build(BuildContext context) {
@@ -185,6 +195,7 @@ class _DashboardView extends StatelessWidget {
                 icon: Icons.add_circle,
                 label: 'הצעת מחיר חדשה',
                 color: cs.primary,
+                onTap: onNavigate != null ? () => onNavigate!(1) : null,
               ),
             ),
             const SizedBox(width: 12),
@@ -193,6 +204,7 @@ class _DashboardView extends StatelessWidget {
                 icon: Icons.people,
                 label: 'ניהול לקוחות',
                 color: cs.tertiary,
+                onTap: onNavigate != null ? () => onNavigate!(2) : null,
               ),
             ),
           ],
@@ -217,11 +229,13 @@ class _QuickActionTile extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.color,
+    this.onTap,
   });
 
   final IconData icon;
   final String label;
   final Color color;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -229,7 +243,7 @@ class _QuickActionTile extends StatelessWidget {
     return Card(
       color: color,
       child: InkWell(
-        onTap: () {},
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 24),
