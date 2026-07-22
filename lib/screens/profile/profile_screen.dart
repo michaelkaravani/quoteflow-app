@@ -5,6 +5,7 @@ import '../../models/profile.dart';
 import '../../services/firestore_service.dart';
 import '../about_screen.dart';
 import 'logo_picker.dart';
+import 'theme_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.firestoreService});
@@ -260,6 +261,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
             const SizedBox(height: 32),
+            ListTile(
+              leading: const Icon(Icons.color_lens_outlined),
+              title: const Text('ערכת נושא'),
+              trailing: const Icon(Icons.chevron_left),
+              onTap: () => showModalBottomSheet(
+                context: context,
+                builder: (_) => ThemePicker(notifier: themeNotifier),
+              ),
+            ),
+            const SizedBox(height: 4),
             ListTile(
               leading: const Icon(Icons.info_outline),
               title: const Text('אודות האפליקציה'),
