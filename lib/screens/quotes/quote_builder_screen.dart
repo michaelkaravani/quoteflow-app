@@ -69,6 +69,7 @@ class _QuoteBuilderScreenState extends State<QuoteBuilderScreen> {
 
   Future<void> _save() async {
     if (_customer == null) { _showMessage('נא לבחור לקוח'); return; }
+    if (_customer!.id.isEmpty) { _showMessage('שגיאה: מזהה הלקוח ריק. נא לבחור שוב.'); return; }
     if (_items.isEmpty) { _showMessage('נא להוסיף לפחות פריט אחד'); return; }
 
     setState(() => _isSaving = true);

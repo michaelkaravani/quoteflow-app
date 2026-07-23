@@ -27,6 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _notesController = TextEditingController();
   final _termsController = TextEditingController();
   bool _vatExempt = false;
+  bool _showQuoteNumber = true;
   String _logoPath = '';
   bool _isLoading = true;
   bool _isSaving = false;
@@ -57,6 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _emailController.text = profile.email;
         _vatController.text = profile.vatRate.toStringAsFixed(0);
         _vatExempt = profile.vatExempt;
+        _showQuoteNumber = profile.showQuoteNumber;
         _notesController.text = profile.defaultPdfNotes;
         _termsController.text = profile.paymentTerms;
         _logoPath = profile.logoPath;
@@ -81,6 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         logoPath: _logoPath,
         vatRate: double.tryParse(_vatController.text.trim()) ?? 17,
         vatExempt: _vatExempt,
+        showQuoteNumber: _showQuoteNumber,
         defaultPdfNotes: _notesController.text.trim(),
         paymentTerms: _termsController.text.trim(),
       ));
@@ -258,6 +261,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
               surfaceTintColor: Colors.transparent,
               child: Column(
                 children: [
+                  SwitchListTile(
+                    secondary: Icon(Icons.tag, color: cs.primary),
+                    title: const Text('הצג מספר הצעה', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: Text('הצגת #N ליד שם ההצעה (מוצג תמיד אם אין כותרת)',
+                        style: TextStyle(fontSize: 13, color: cs.onSurface.withAlpha(153))),
+                    value: _showQuoteNumber,
+                    onChanged: (v) async {
+                      setState(() => _showQuoteNumber = v);
+                      try {
+                        await widget.firestoreService.saveProfile(Profile(
+                          businessName: _businessController.text.trim(),
+                          phone: _phoneController.text.trim(),
+                          email: _emailController.text.trim(),
+                          logoPath: _logoPath,
+                          vatRate: double.tryParse(_vatController.text.trim()) ?? 17,
+                          vatExempt: _vatExempt,
+                          showQuoteNumber: v,
+                          defaultPdfNotes: _notesController.text.trim(),
+                          paymentTerms: _termsController.text.trim(),
+                        ));
+                      } catch (_) {}
+                    },
+                  ),
+                  const Divider(height: 1),
                   ListTile(
                     leading: Icon(Icons.palette_outlined, color: cs.primary),
                     title: const Text('ערכת נושא', style: TextStyle(fontWeight: FontWeight.w600)),

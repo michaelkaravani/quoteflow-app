@@ -8,6 +8,7 @@ class QuoteCard extends StatelessWidget {
   const QuoteCard({
     super.key,
     required this.quote,
+    this.showQuoteNumber = true,
     this.onEdit,
     this.onDelete,
     this.onShare,
@@ -15,6 +16,7 @@ class QuoteCard extends StatelessWidget {
   });
 
   final Quote quote;
+  final bool showQuoteNumber;
   final ValueChanged<Quote>? onEdit;
   final ValueChanged<Quote>? onDelete;
   final VoidCallback? onShare;
@@ -56,7 +58,9 @@ class QuoteCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(quote.title.isNotEmpty ? quote.title : 'הצעה #${quote.quoteNumber}',
+                      Text(quote.title.isNotEmpty
+                          ? (showQuoteNumber ? '${quote.title} #${quote.quoteNumber}' : quote.title)
+                          : 'הצעה #${quote.quoteNumber}',
                           style: const TextStyle(fontWeight: FontWeight.bold)),
                       Text(quote.customerName,
                           style: TextStyle(color: cs.onSurface.withAlpha(153), fontSize: 13)),

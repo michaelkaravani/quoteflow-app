@@ -31,6 +31,20 @@ class FirestoreService {
     return Profile.fromMap(doc.data()!);
   }
 
+  Stream<Profile?> watchProfile() {
+    return _profile.snapshots().map((doc) {
+      if (!doc.exists) return null;
+      return Profile.fromMap(doc.data()!);
+    });
+  }
+
+  Future<List<Customer>> loadCustomers() async {
+    final snapshot = await _customers.orderBy('name').get();
+    return snapshot.docs
+        .map((doc) => Customer.fromMap(doc.id, doc.data()))
+        .toList();
+  }
+
   Future<void> saveProfile(Profile profile) async {
     await _profile.set(profile.toMap(), SetOptions(merge: true));
   }
@@ -111,6 +125,36 @@ class FirestoreService {
 
   Future<void> deleteQuote(String id) async {
     await _quotes.doc(id).delete();
+  }
+
+  // ── Data Migration ──
+
+  Future<void> migrateEmptyCustomerIds() async {
+    final quotes = await _quotes.get();
+    final batch = FirebaseFirestore.instance.batch();
+    bool hasChanges = false;
+
+    for (final doc in quotes.docs) {
+      final data = doc.data();
+      final customerId = data['customerId'] as String?;
+      if (customerId == null || customerId.isEmpty) {
+        final customerName = data['customerName'] as String? ?? '';
+        if (customerName.isNotEmpty) {
+          final customer = await _customers
+              .where('name', isEqualTo: customerName)
+              .limit(1)
+              .get();
+          if (customer.docs.isNotEmpty) {
+            batch.update(doc.reference, {
+              'customerId': customer.docs.first.id,
+            });
+            hasChanges = true;
+          }
+        }
+      }
+    }
+
+    if (hasChanges) await batch.commit();
   }
 
   // ── Helpers ──

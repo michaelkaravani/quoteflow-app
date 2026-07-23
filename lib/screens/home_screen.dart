@@ -77,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           MaterialPageRoute(
                             builder: (_) => Scaffold(
                               appBar: AppBar(
-                                title: const Text('עריכת הצעת מחיר'),
+                                title: Text('עריכת הצעת מחיר #${quote.quoteNumber}'),
                                 backgroundColor: Theme.of(context).colorScheme.primary,
                                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
                               ),
@@ -97,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             surfaceTintColor: Colors.transparent,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             title: const Text('מחיקת הצעת מחיר'),
-                            content: Text('האם למחוק את ${quote.title.isNotEmpty ? quote.title : 'הצעה #${quote.quoteNumber}'}?'),
+                            content: Text('האם למחוק את ${quote.title.isNotEmpty ? '${quote.title} #${quote.quoteNumber}' : 'הצעה #${quote.quoteNumber}'}?'),
                             actions: [
                               TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('ביטול')),
                               FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('מחיקה')),

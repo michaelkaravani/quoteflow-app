@@ -7,6 +7,7 @@ class Profile {
   final bool vatExempt;
   final String defaultPdfNotes;
   final String paymentTerms;
+  final bool showQuoteNumber;
 
   const Profile({
     required this.businessName,
@@ -17,6 +18,7 @@ class Profile {
     this.vatExempt = false,
     this.defaultPdfNotes = '',
     this.paymentTerms = '',
+    this.showQuoteNumber = true,
   });
 
   Map<String, dynamic> toMap() => {
@@ -28,6 +30,7 @@ class Profile {
         'vatExempt': vatExempt,
         'defaultPdfNotes': defaultPdfNotes,
         'paymentTerms': paymentTerms,
+        'showQuoteNumber': showQuoteNumber,
       };
 
   factory Profile.fromMap(Map<String, dynamic> map) => Profile(
@@ -39,6 +42,7 @@ class Profile {
         vatExempt: map['vatExempt'] as bool? ?? false,
         defaultPdfNotes: map['defaultPdfNotes'] as String? ?? '',
         paymentTerms: map['paymentTerms'] as String? ?? '',
+        showQuoteNumber: map['showQuoteNumber'] as bool? ?? true,
       );
 
   Profile copyWith({
@@ -50,6 +54,7 @@ class Profile {
     bool? vatExempt,
     String? defaultPdfNotes,
     String? paymentTerms,
+    bool? showQuoteNumber,
   }) =>
       Profile(
         businessName: businessName ?? this.businessName,
@@ -60,5 +65,6 @@ class Profile {
         vatExempt: vatExempt ?? this.vatExempt,
         defaultPdfNotes: defaultPdfNotes ?? this.defaultPdfNotes,
         paymentTerms: paymentTerms ?? this.paymentTerms,
+        showQuoteNumber: showQuoteNumber ?? this.showQuoteNumber,
       );
 }

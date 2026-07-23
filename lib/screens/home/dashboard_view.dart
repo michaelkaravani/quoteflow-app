@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/pdf_service.dart';
+import '../../models/customer.dart';
 import '../../models/profile.dart';
 import '../../models/quote.dart';
 import '../../models/quote_status.dart';
@@ -34,14 +35,17 @@ class DashboardView extends StatefulWidget {
 class _DashboardViewState extends State<DashboardView> {
   final _searchController = TextEditingController();
   String _query = '';
-  late final Future<Profile?> _profileFuture;
+  QuoteStatus? _filterStatus;
+  String? _filterCustomerId;
+  late final Stream<Profile?> _profileStream;
   late final Stream<List<Quote>> _quotesStream;
 
   @override
   void initState() {
     super.initState();
-    _profileFuture = widget.firestoreService!.loadProfile();
+    _profileStream = widget.firestoreService!.watchProfile();
     _quotesStream = widget.firestoreService!.watchQuotes();
+    widget.firestoreService!.migrateEmptyCustomerIds();
   }
 
   @override
@@ -68,10 +72,12 @@ class _DashboardViewState extends State<DashboardView> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return FutureBuilder<Profile?>(
-      future: _profileFuture,
+    return StreamBuilder<Profile?>(
+      stream: _profileStream,
       builder: (context, profileSnapshot) {
-        final businessName = profileSnapshot.data?.businessName ?? '';
+        final profile = profileSnapshot.data;
+        final businessName = profile?.businessName ?? '';
+        final showQuoteNumber = profile?.showQuoteNumber ?? true;
 
         return StreamBuilder<List<Quote>>(
           stream: _quotesStream,
@@ -87,7 +93,18 @@ class _DashboardViewState extends State<DashboardView> {
               return const Center(child: CircularProgressIndicator());
             }
             final allQuotes = snapshot.data ?? [];
-            final quotes = _filtered(allQuotes);
+            final filteredQuotes = allQuotes.where((q) {
+              if (_filterStatus != null && q.status != _filterStatus) {
+                return false;
+              }
+              if (_filterCustomerId != null) {
+                final match = q.customerId == _filterCustomerId;
+                debugPrint('QUOTE_FILTER: q.customerId="${q.customerId}" == _filterCustomerId="$_filterCustomerId" => $match');
+                if (!match) return false;
+              }
+              return true;
+            }).toList();
+            final quotes = _filtered(filteredQuotes);
 
             return ListView(
               padding: const EdgeInsets.all(16),
@@ -126,25 +143,63 @@ class _DashboardViewState extends State<DashboardView> {
                       icon: Icons.description_outlined,
                       value: allQuotes.length.toString(),
                       label: 'הצעות',
-                      active: true,
+                      active: _filterStatus == null,
+                      onTap: () => setState(() => _filterStatus = null),
                     )),
                     const SizedBox(width: 10),
                     Expanded(child: KpiCard(
                       icon: Icons.people_outline,
                       value: _uniqueCustomers(allQuotes).toString(),
                       label: 'לקוחות',
-                      active: false,
+                      active: _filterCustomerId != null,
+                      onTap: () => _showCustomerPicker(context),
                     )),
                     const SizedBox(width: 10),
                     Expanded(child: KpiCard(
                       icon: Icons.trending_up,
                       value: '₪${_totalOpen(allQuotes).toStringAsFixed(0)}',
                       label: 'סה"כ פתוח',
-                      active: false,
+                      active: _filterStatus == QuoteStatus.draft || _filterStatus == QuoteStatus.sent,
+                      onTap: () => setState(() =>
+                        _filterStatus = _filterStatus == QuoteStatus.sent ? null : QuoteStatus.sent),
                     )),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                if (_filterStatus != null || _filterCustomerId != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        if (_filterStatus != null)
+                          Chip(
+                            label: Text('סטטוס: ${_filterStatus!.displayName}',
+                                style: TextStyle(fontSize: 13, color: _statusColor(_filterStatus!))),
+                            backgroundColor: _statusColor(_filterStatus!).withAlpha(38),
+                            deleteIcon: const Icon(Icons.close, size: 16),
+                            onDeleted: () => setState(() => _filterStatus = null),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        if (_filterCustomerId != null)
+                          Chip(
+                            label: Text('לקוח מסונן',
+                                style: const TextStyle(fontSize: 13)),
+                            deleteIcon: const Icon(Icons.close, size: 16),
+                            onDeleted: () => setState(() => _filterCustomerId = null),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () => setState(() {
+                            _filterStatus = null;
+                            _filterCustomerId = null;
+                          }),
+                          child: const Text('נקה סינון', style: TextStyle(fontSize: 13)),
+                        ),
+                      ],
+                    ),
+                  ),
+                SizedBox(height: _filterStatus != null || _filterCustomerId != null ? 16 : 24),
                 Row(
                   children: [
                     Expanded(
@@ -208,6 +263,7 @@ class _DashboardViewState extends State<DashboardView> {
                 else
                   ...quotes.take(20).map((quote) => QuoteCard(
                     quote: quote,
+                    showQuoteNumber: showQuoteNumber,
                     onEdit: widget.onEditQuote,
                     onDelete: widget.onDeleteQuote,
                     onShare: () => _shareQuote(context, quote),
@@ -269,6 +325,68 @@ class _DashboardViewState extends State<DashboardView> {
               )),
               const SizedBox(height: 8),
             ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCustomerPicker(BuildContext context) {
+    final customersFuture = widget.firestoreService!.loadCustomers();
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) {
+        final cs = Theme.of(context).colorScheme;
+        return SafeArea(
+          child: FutureBuilder<List<Customer>>(
+            future: customersFuture,
+            builder: (ctx, snapshot) {
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text('שגיאה בטעינת לקוחות: ${snapshot.error}',
+                      style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                );
+              }
+              final customers = snapshot.data ?? [];
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text('בחר לקוח לסינון',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: cs.primary)),
+                  ),
+                  if (customers.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text('אין לקוחות רשומים'),
+                    )
+                  else
+                    SizedBox(
+                      height: 300,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: customers.length,
+                        itemBuilder: (ctx, i) {
+                          final c = customers[i];
+                          return ListTile(
+                            title: Text(c.name),
+                            trailing: _filterCustomerId == c.id
+                                ? Icon(Icons.check, color: cs.primary)
+                                : null,
+                            onTap: () {
+                              setState(() => _filterCustomerId = c.id);
+                              Navigator.pop(ctx);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         );
       },
