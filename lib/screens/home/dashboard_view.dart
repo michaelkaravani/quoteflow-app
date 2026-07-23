@@ -36,6 +36,7 @@ class _DashboardViewState extends State<DashboardView> {
   final _searchController = TextEditingController();
   String _query = '';
   QuoteStatus? _filterStatus;
+  bool _filterOpenOnly = false;
   String? _filterCustomerId;
   late final Stream<Profile?> _profileStream;
   late final Stream<List<Quote>> _quotesStream;
@@ -94,6 +95,9 @@ class _DashboardViewState extends State<DashboardView> {
             }
             final allQuotes = snapshot.data ?? [];
             final filteredQuotes = allQuotes.where((q) {
+              if (_filterOpenOnly && q.status != QuoteStatus.draft && q.status != QuoteStatus.sent) {
+                return false;
+              }
               if (_filterStatus != null && q.status != _filterStatus) {
                 return false;
               }
@@ -143,8 +147,8 @@ class _DashboardViewState extends State<DashboardView> {
                       icon: Icons.description_outlined,
                       value: allQuotes.length.toString(),
                       label: 'הצעות',
-                      active: _filterStatus == null,
-                      onTap: () => setState(() => _filterStatus = null),
+                      active: _filterStatus == null && !_filterOpenOnly,
+                      onTap: () => setState(() { _filterStatus = null; _filterOpenOnly = false; }),
                     )),
                     const SizedBox(width: 10),
                     Expanded(child: KpiCard(
@@ -159,18 +163,26 @@ class _DashboardViewState extends State<DashboardView> {
                       icon: Icons.trending_up,
                       value: '₪${_totalOpen(allQuotes).toStringAsFixed(0)}',
                       label: 'סה"כ פתוח',
-                      active: _filterStatus == QuoteStatus.draft || _filterStatus == QuoteStatus.sent,
-                      onTap: () => setState(() =>
-                        _filterStatus = _filterStatus == QuoteStatus.sent ? null : QuoteStatus.sent),
+                      active: _filterOpenOnly,
+                      onTap: () => setState(() => _filterOpenOnly = !_filterOpenOnly),
                     )),
                   ],
                 ),
                 const SizedBox(height: 16),
-                if (_filterStatus != null || _filterCustomerId != null)
+                if (_filterStatus != null || _filterOpenOnly || _filterCustomerId != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       children: [
+                        if (_filterOpenOnly)
+                          Chip(
+                            label: const Text('סטטוס: פתוח',
+                                style: TextStyle(fontSize: 13, color: Colors.blue)),
+                            backgroundColor: Colors.blue.withAlpha(38),
+                            deleteIcon: const Icon(Icons.close, size: 16),
+                            onDeleted: () => setState(() => _filterOpenOnly = false),
+                            visualDensity: VisualDensity.compact,
+                          ),
                         if (_filterStatus != null)
                           Chip(
                             label: Text('סטטוס: ${_filterStatus!.displayName}',
@@ -192,6 +204,7 @@ class _DashboardViewState extends State<DashboardView> {
                         TextButton(
                           onPressed: () => setState(() {
                             _filterStatus = null;
+                            _filterOpenOnly = false;
                             _filterCustomerId = null;
                           }),
                           child: const Text('נקה סינון', style: TextStyle(fontSize: 13)),
@@ -199,7 +212,7 @@ class _DashboardViewState extends State<DashboardView> {
                       ],
                     ),
                   ),
-                SizedBox(height: _filterStatus != null || _filterCustomerId != null ? 16 : 24),
+                SizedBox(height: _filterStatus != null || _filterOpenOnly || _filterCustomerId != null ? 16 : 24),
                 Row(
                   children: [
                     Expanded(
